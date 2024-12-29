@@ -89,8 +89,9 @@ int getMenuChoice() {
     cout << "2. Calculate matrix inverse\n";
     cout << "3. Calculate determinant\n";
     cout << "4. Exit\n";
+    cout << "5. Print LU decomposition" << "\n";
     cout << "Enter your choice (1-4): ";
-    while (!(cin >> choice) || choice < 1 || choice > 4) {
+    while (!(cin >> choice) || choice < 1 || choice > 5) {
         cout << "Invalid input. Please enter a number between 1 and 4: ";
         clearInputBuffer();
     }
@@ -103,7 +104,7 @@ int main() {
         getDimensions(n);
         auto A = getMatrix(n);
         LUdcmp solver(A);
-
+        
         while (true) {
             int choice = getMenuChoice();
             switch (choice) {
@@ -136,9 +137,13 @@ int main() {
                     << setprecision(6) << solver.det() << endl;
                 break;
             }
-            case 4:
+            case 4:{
                 cout << "Thank you for using LU Decomposition Calculator!\n";
                 return 0;
+            }
+            case 5:
+                solver.printLU();
+                break;
             }
         }
     }
