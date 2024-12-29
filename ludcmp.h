@@ -17,9 +17,8 @@ class LUdcmp
         LUdcmp(const vector<vector<double>>& a): n(static_cast<int>(a.size())),lu(a),index(static_cast<size_t>(n)),d(1.0) 
         {
             //Check square matrix
-            if (a.empty() || a[0].size() != static_cast<size_t>(n)) 
-                throw runtime_error("LUdcmp: non-square matrix");
-            
+            if (a.empty() || a[0].size() != static_cast<size_t>(n))  throw runtime_error("LUdcmp: non-square matrix");
+               
 
             vector<double> vv(static_cast<size_t>(n));
 
@@ -33,7 +32,7 @@ class LUdcmp
                 vv[i] = 1.0 / big;
             }
 
-            // Crout's algorithm implementation
+            // Crout algorithm implementation
             //loop each column of matrix
             for (int k = 0; k < n; k++) 
             {
@@ -54,7 +53,7 @@ class LUdcmp
                 {
                     for (int j = 0; j < n; j++) swap(lu[imax][j], lu[k][j]);
                     d = -d;
-                    vv[imax] = vv[k];
+                    swap(vv[imax], vv[k]);
                 }
 
                 index[k] = imax;
@@ -70,65 +69,46 @@ class LUdcmp
                 }
             }
         }
-        // Modified solve method for multiple right-hand sides
-        void solve(const vector<vector<double>>& b, vector<vector<double>>& x)
+        void solve(vector<double>& b, vector<double>& x) 
         {
-            int nrhs = b[0].size();  // Number of right-hand sides
+            if (b.size() != n || x.size() != n) throw runtime_error("LUdcmp::solve bad sizes");
+            x = b;
 
-            // Check dimensions
-            if (b.size() != n || x.size() != n || (x[0].size() != nrhs)) 
-                throw runtime_error("LUdcmp::solve bad sizes");
-            
-
-            // Solve each right-hand side
-            vector<double> xx(n);
-            for (int j = 0; j < nrhs; j++) 
+            // Ly = b  (Forward substitution)
+            for (int i = 0; i < n; i++) 
             {
-                // Copy the j-th right-hand side
-                for (int i = 0; i < n; i++) xx[i] = b[i][j];
-                
-                // Solve for this right-hand side
-                solve(xx, xx);
+                // swap row
+                swap(x[i], x[index[i]]);
+                for (int j = 0; j < i; j++) x[i] -= lu[i][j] * x[j];
+            }
 
-                // Copy solution to output
-                for (int i = 0; i < n; i++)  x[i][j] = xx[i];
-                
+            // Ux = y  (Back substitution)
+            for (int i = n - 1; i >= 0; i--) 
+            {
+                for (int j = i + 1; j < n; j++) x[i] -= lu[i][j] * x[j];
+                x[i] /= lu[i][i];
             }
         }
 
-        // Single right-hand side solver
-        void solve(vector<double>& b, vector<double>& x) 
+        void solve(const vector<vector<double>>& b, vector<vector<double>>& x) 
         {
-            // Original single vector solve implementation
-            if (b.size() != n || x.size() != n) 
-                throw runtime_error("LUdcmp::solve bad sizes");
+            int nrhs = b[0].size();  
+
+            if (b.size() != n || x.size() != n || x[0].size() != nrhs) throw runtime_error("LUdcmp::solve bad sizes");
+                
+            vector<double> single_b(n);
+            vector<double> single_x(n);
+
+            for (int k = 0; k < nrhs; k++) 
+            {
+                // Lấy cột k từ ma trận b
+                for (int i = 0; i < n; i++) single_b[i] = b[i][k];
            
+                solve(single_b, single_x);
 
-            x = b;
-            int ii = 0;
-
-            // Forward substitution
-            for (int i = 0; i < n; i++) 
-            {
-                int ip = index[i];
-                double sum = x[ip];
-                x[ip] = x[i];
-                if (ii != 0) 
-                {
-                    for (int j = ii - 1; j < i; j++) sum -= lu[i][j] * x[j];
-                }
-                else if (sum != 0.0) ii = i + 1;
+                // Lưu kết quả vào cột k của ma trận x
+                for (int i = 0; i < n; i++) x[i][k] = single_x[i];
                 
-                x[i] = sum;
-            }
-
-            // Back substitution
-            for (int i = n - 1; i >= 0; i--) 
-            {
-                double sum = x[i];
-                for (int j = i + 1; j < n; j++) sum -= lu[i][j] * x[j];
-                
-                x[i] = sum / lu[i][i];
             }
         }
 
@@ -153,6 +133,46 @@ class LUdcmp
                 solve(b, x);
                 for (int j = 0; j < n; j++) ainv[j][i] = x[j];
                 b[i] = 0.0;
+            }
+        }
+        void getLU(vector<vector<double>>& L, vector<vector<double>>& U) const {
+            L.resize(n, vector<double>(n, 0.0));
+            U.resize(n, vector<double>(n, 0.0));
+
+            // Fill L matrix (including diagonal of 1's)
+            for (int i = 0; i < n; i++) {
+                L[i][i] = 1.0; // Diagonal elements of L are 1
+                for (int j = 0; j < i; j++) {
+                    L[i][j] = lu[i][j];
+                }
+            }
+
+            // Fill U matrix
+            for (int i = 0; i < n; i++) {
+                for (int j = i; j < n; j++) {
+                    U[i][j] = lu[i][j];
+                }
+            }
+        }
+
+        void printLU() const {
+            vector<vector<double>> L, U;
+            getLU(L, U);
+
+            cout << "\nL Matrix:\n";
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    cout << setw(12) << fixed << setprecision(6) << L[i][j];
+                }
+                cout << endl;
+            }
+
+            cout << "\nU Matrix:\n";
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    cout << setw(12) << fixed << setprecision(6) << U[i][j];
+                }
+                cout << endl;
             }
         }
 };
